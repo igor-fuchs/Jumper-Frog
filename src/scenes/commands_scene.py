@@ -9,8 +9,8 @@ import pygame
 from src.core.input_handler import InputHandler
 from src.core.settings import (
     SCREEN_WIDTH,
-    DARK_GREEN, LIGHT_GREEN, WHITE, BLACK,
-    DARK_GRAY, LIGHT_GRAY,
+    DARK_GREEN, LIGHT_GREEN, BLACK,
+    DARK_GRAY, LIGHT_GRAY
 )
 from src.scenes.scene import Scene
 from src.ui.back_button import BackButton
