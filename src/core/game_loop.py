@@ -1,10 +1,17 @@
 """Game loop - handles update, render, and timing."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pygame
 
 from src.core.settings import FPS
 from src.core.renderer import Renderer
 from src.core.input_handler import InputHandler
+
+if TYPE_CHECKING:
+    from src.core.hot_reloader import HotReloader
 
 
 class GameLoop:
@@ -21,14 +28,25 @@ class GameLoop:
         """Switch the active scene."""
         self.current_scene = scene
 
-    def run(self) -> None:
-        """Execute the loop until the game is quit."""
+    def run(self, hot_reloader: HotReloader | None = None) -> None:
+        """Execute the loop until the game is quit.
+
+        Parameters
+        ----------
+        hot_reloader : HotReloader, optional
+            When provided, the loop calls ``hot_reloader.check()`` each
+            frame so that modified source files are reloaded on the fly.
+        """
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
 
             if not self.input_handler.poll():
                 self.running = False
                 break
+
+            # Check for source file changes (dev-only hot-reload)
+            if hot_reloader is not None:
+                hot_reloader.check()
 
             if self.current_scene:
                 self.current_scene.handle_events(self.input_handler)
