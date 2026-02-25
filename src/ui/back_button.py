@@ -20,7 +20,7 @@ from typing import Callable, Optional
 
 import pygame
 
-from src.core.settings import WHITE, LIGHT_GREEN, BLACK
+from src.core.settings import WHITE, LIGHT_GREEN
 
 
 class BackButton:

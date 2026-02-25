@@ -7,7 +7,7 @@ import pygame
 from src.core.input_handler import InputHandler
 from src.core.settings import (
     SCREEN_WIDTH, SCREEN_HEIGHT,
-    DARK_GREEN, LIGHT_GREEN, WHITE, BLACK,
+    DARK_GREEN, LIGHT_GREEN, BLACK
 )
 from src.scenes.scene import Scene
 from src.ui.button import Button
