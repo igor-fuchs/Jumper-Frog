@@ -9,6 +9,7 @@ TITLE = "Frog Jumper"
 # Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+RED = (200, 40, 40)
 DARK_GREEN = (34, 139, 34)
 GREEN = (50, 180, 50)
 LIGHT_GREEN = (144, 238, 144)
