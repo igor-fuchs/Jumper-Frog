@@ -1,5 +1,7 @@
 """Menu scene - main menu screen."""
 
+import sys
+
 import pygame
 
 from src.core.input_handler import InputHandler
@@ -31,8 +33,8 @@ class MenuScene(Scene):
         start_y = 260
 
         self.buttons: list[Button] = []
-        labels = ["Iniciar", "Comandos", "Extra"]
-        callbacks = [self._on_start, self._on_commands, self._on_extra]
+        labels = ["Iniciar", "Comandos", "Sair"]
+        callbacks = [self._on_start, self._on_commands, self._on_quit]
 
         for i, (label, cb) in enumerate(zip(labels, callbacks)):
             rect = pygame.Rect(
@@ -58,13 +60,16 @@ class MenuScene(Scene):
     # ── Event handlers ───────────────────────────────────────────────
 
     def _on_start(self) -> None:
-        print("[Menu] Iniciar pressionado")
+        from src.scenes.levels_scene import LevelsScene
+        self.manager.switch(LevelsScene(self.manager))
 
     def _on_commands(self) -> None:
-        print("[Menu] Comandos pressionado")
+        from src.scenes.commands_scene import CommandsScene
+        self.manager.switch(CommandsScene(self.manager))
 
-    def _on_extra(self) -> None:
-        print("[Menu] Extra pressionado")
+    def _on_quit(self) -> None:
+        pygame.quit()
+        sys.exit()
 
     # ── Scene interface ──────────────────────────────────────────────
 
@@ -103,16 +108,6 @@ class MenuScene(Scene):
         title = self.title_font.render("Frog Jumper", True, LIGHT_GREEN)
         title_rect = title.get_rect(centerx=SCREEN_WIDTH // 2, y=80)
         screen.blit(title, title_rect)
-
-        # Subtitle
-        sub_font = pygame.font.SysFont("arial", 20)
-        subtitle = sub_font.render(
-            "Atravesse a estrada e o rio!", True, WHITE,
-        )
-        sub_rect = subtitle.get_rect(
-            centerx=SCREEN_WIDTH // 2, y=160,
-        )
-        screen.blit(subtitle, sub_rect)
 
         # Buttons
         for btn in self.buttons:
