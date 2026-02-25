@@ -158,4 +158,6 @@ class LevelsScene(Scene):
         self.manager.switch(MenuScene(self.manager))
 
     def _on_level_selected(self, level: int) -> None:
-        print(f"[Levels] Fase {level} selecionada")
+        """Open the gameplay scene for the chosen level."""
+        from src.scenes.game_scene import GameScene
+        self.manager.switch(GameScene(self.manager, level=level))
