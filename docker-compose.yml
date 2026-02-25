@@ -1,0 +1,9 @@
+services:
+  game:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - DISPLAY=${DISPLAY}
+    stdin_open: true
+    tty: true
