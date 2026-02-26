@@ -477,6 +477,9 @@ class Frog(Entity):
         """
         self.vx = -self.vx
 
+        # Flip the facing direction on bounce so the frog looks toward the direction it's moving.
+        self.facing = self.facing * -1
+
     def hit_ceiling(self) -> None:
         """Cancel upward velocity after hitting a ceiling mid-jump.
 
