@@ -101,6 +101,7 @@ class GameScene(Scene):
             keys_pressed=keys,
             keys_down=self._keys_down,
             keys_up=self._keys_up,
+            walls=self.walls,
         )
 
         # Save position before collision for bounce / land detection

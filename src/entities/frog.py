@@ -26,6 +26,7 @@ can push it out of overlapping objects.
 """
 
 import math
+import os
 
 import pygame
 
@@ -64,9 +65,18 @@ class Frog(Entity):
     STATE_AIRBORNE = "airborne"
     STATE_FALLING = "falling"  # special airborne state for walk-off-the-edge
 
+    # ── Visual states (determine which sprite to show) ───────────────
+    VISUAL_DEFAULT = "default"
+    VISUAL_WALKING = "walking"
+    VISUAL_PREPARING = "preparing"
+    VISUAL_JUMPING = "jumping"
+    VISUAL_FALLING = "falling"
+    VISUAL_ON_EDGE_FRONT = "on_edge_front"
+    VISUAL_ON_EDGE_BACK = "on_edge_back"
+
     # ── Size defaults ────────────────────────────────────────────────
-    DEFAULT_WIDTH = 40
-    DEFAULT_HEIGHT = 40
+    DEFAULT_WIDTH = 36
+    DEFAULT_HEIGHT = 26
 
     # ── Movement defaults ────────────────────────────────────────────
     DEFAULT_SPEED = 250.0
@@ -77,6 +87,16 @@ class Frog(Entity):
     DEFAULT_JUMP_MIN_POWER = 200.0
     DEFAULT_JUMP_MAX_POWER = 600.0
     DEFAULT_GRAVITY = 800.0
+
+    # ── Animation defaults ────────────────────────────────────────────
+    WALK_FRAME_DURATION = 0.12   # seconds per walking animation frame
+    EDGE_THRESHOLD = 20          # pixels from centre to detect platform edge
+
+    # ── Asset directory ──────────────────────────────────────────────
+    _ASSETS_DIR = os.path.join(
+        os.path.dirname(__file__), os.pardir, os.pardir,
+        "assets", "frogs",
+    )
 
     def __init__(
         self,
@@ -114,6 +134,52 @@ class Frog(Entity):
         # Internal jump bookkeeping
         self._charge_time: float = 0.0
         self._ground_y: float = y  # y-level to land back on
+
+        # ── Sprite & animation ───────────────────────────────────────
+        self._sprites: dict = {}
+        self._visual_state: str = self.VISUAL_DEFAULT
+        self._walk_frame: int = 0
+        self._walk_timer: float = 0.0
+        self._load_sprites()
+
+    # ── Sprite loading ───────────────────────────────────────────────
+
+    def _load_sprites(self) -> None:
+        """Load and scale all frog sprite assets from disk.
+
+        All images except *jumping.png* are 18 × 13 and are scaled to
+        ``(width, height)`` (default 36 × 26).  *jumping.png* is
+        18 × 17 and is scaled keeping the same horizontal factor so
+        that its aspect ratio is preserved.
+        """
+        def _load(
+            filename: str,
+            size: tuple[int, int] | None = None,
+        ) -> pygame.Surface:
+            if size is None:
+                size = (self.width, self.height)
+            path = os.path.join(self._ASSETS_DIR, filename)
+            return pygame.transform.scale(
+                pygame.image.load(path).convert_alpha(), size,
+            )
+
+        jump_height = int(17 * self.width / 18)  # keep aspect ratio
+
+        self._sprites = {
+            self.VISUAL_DEFAULT: _load("default.png"),
+            self.VISUAL_WALKING: [
+                _load("walking_1.png"),
+                _load("walking_2.png"),
+                _load("walking_3.png"),
+            ],
+            self.VISUAL_PREPARING: _load("preparing.png"),
+            self.VISUAL_JUMPING: _load(
+                "jumping.png", (self.width, jump_height),
+            ),
+            self.VISUAL_FALLING: _load("screaming.png"),
+            self.VISUAL_ON_EDGE_FRONT: _load("looking_front.png"),
+            self.VISUAL_ON_EDGE_BACK: _load("looking_back.png"),
+        }
 
     # ── Convenience queries ──────────────────────────────────────────
 
@@ -160,9 +226,14 @@ class Frog(Entity):
         elif self.state == self.STATE_AIRBORNE:
             self._update_airborne(dt)
         elif self.state == self.STATE_FALLING:
-            self._update_falling(dt, keys_pressed)
+            self._update_falling(dt,  keys_pressed)
 
         self._sync_rect()
+
+        # ── Visual state & animation ─────────────────────────────────
+        walls = kwargs.get("walls")
+        self._visual_state = self._resolve_visual_state(walls)
+        self._advance_walk_animation(dt)
 
     # ── State updates ────────────────────────────────────────────────
 
@@ -245,6 +316,126 @@ class Frog(Entity):
             self.facing = 1
 
         self._apply_physics(dt)
+
+    # ── Animation / visual helpers ────────────────────────────────────
+
+    def _resolve_visual_state(self, walls) -> str:
+        """Choose the visual state based on physics state and context.
+
+        Priority (highest first):
+        1. charging  → preparing
+        2. airborne  → jumping
+        3. falling   → falling (screaming)
+        4. grounded + moving → walking
+        5. grounded + idle + near edge → on_edge_front / on_edge_back
+        6. grounded + idle → default
+        """
+        if self.state == self.STATE_CHARGING:
+            return self.VISUAL_PREPARING
+        if self.state == self.STATE_AIRBORNE:
+            return self.VISUAL_JUMPING
+        if self.state == self.STATE_FALLING:
+            return self.VISUAL_FALLING
+
+        # Grounded — walking or idle
+        if self.vx != 0:
+            return self.VISUAL_WALKING
+
+        # Idle — check for edge proximity
+        if walls is not None:
+            edge_dir = self._detect_edge(walls)
+            if edge_dir is not None:
+                if edge_dir == self.facing:
+                    return self.VISUAL_ON_EDGE_FRONT
+                return self.VISUAL_ON_EDGE_BACK
+
+        return self.VISUAL_DEFAULT
+
+    def _detect_edge(self, walls) -> int | None:
+        """Return the direction of a nearby platform edge, or ``None``.
+
+        A 1-pixel tall probe is placed at ``EDGE_THRESHOLD`` pixels to
+        the left and right of the frog's horizontal centre, one pixel
+        below its feet.  If either probe finds no supporting wall the
+        frog is considered to be near an edge in that direction.
+
+        Returns
+        -------
+        int or None
+            ``-1`` for a left edge, ``1`` for a right edge, or
+            ``None`` if no edge is detected.  When *both* sides are
+            edges, the direction the frog is facing takes precedence.
+        """
+        cx = self.rect.centerx
+        bottom = self.rect.bottom
+
+        left_probe = pygame.Rect(
+            cx - self.EDGE_THRESHOLD, bottom, 1, 1,
+        )
+        right_probe = pygame.Rect(
+            cx + self.EDGE_THRESHOLD, bottom, 1, 1,
+        )
+
+        near_left = not any(
+            left_probe.colliderect(w.rect) for w in walls
+        )
+        near_right = not any(
+            right_probe.colliderect(w.rect) for w in walls
+        )
+
+        if near_left and near_right:
+            return self.facing
+        if near_left:
+            return -1
+        if near_right:
+            return 1
+        return None
+
+    def _advance_walk_animation(self, dt: float) -> None:
+        """Tick the walking sprite timer and cycle frames."""
+        if self._visual_state == self.VISUAL_WALKING:
+            self._walk_timer += dt
+            if self._walk_timer >= self.WALK_FRAME_DURATION:
+                self._walk_timer -= self.WALK_FRAME_DURATION
+                self._walk_frame = (
+                    (self._walk_frame + 1)
+                    % len(self._sprites[self.VISUAL_WALKING])
+                )
+        else:
+            self._walk_frame = 0
+            self._walk_timer = 0.0
+
+    # ── Drawing ──────────────────────────────────────────────────────
+
+    def draw(self, screen: pygame.Surface) -> None:
+        """Render the current sprite instead of a plain rectangle.
+
+        The sprite is flipped horizontally when the frog faces left.
+        For the *jumping* sprite (taller than the hitbox) the image is
+        drawn so that its **bottom** edge aligns with the hitbox's
+        bottom edge, keeping the visual grounded.
+        """
+        if not self._sprites:
+            # Fallback to coloured box when sprites are unavailable
+            super().draw(screen)
+            return
+
+        visual = self._visual_state
+        if visual == self.VISUAL_WALKING:
+            sprite = self._sprites[self.VISUAL_WALKING][self._walk_frame]
+        else:
+            sprite = self._sprites.get(
+                visual, self._sprites[self.VISUAL_DEFAULT],
+            )
+
+        # Flip horizontally when facing left
+        if self.facing == 1:
+            sprite = pygame.transform.flip(sprite, True, False)
+
+        # Align the bottom of the sprite with the bottom of the hitbox
+        draw_x = self.rect.x
+        draw_y = self.rect.bottom - sprite.get_height()
+        screen.blit(sprite, (draw_x, draw_y))
 
     # ── Movement ─────────────────────────────────────────────────────
 
