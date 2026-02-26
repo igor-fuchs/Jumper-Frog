@@ -29,7 +29,7 @@ import math
 
 import pygame
 
-from src.core.settings import GREEN, SCREEN_WIDTH
+from src.core.settings import GREEN
 from src.entities.entity import Entity
 
 
@@ -62,6 +62,7 @@ class Frog(Entity):
     STATE_GROUNDED = "grounded"
     STATE_CHARGING = "charging"
     STATE_AIRBORNE = "airborne"
+    STATE_FALLING = "falling"  # special airborne state for walk-off-the-edge
 
     # ── Size defaults ────────────────────────────────────────────────
     DEFAULT_WIDTH = 40
@@ -118,8 +119,8 @@ class Frog(Entity):
 
     @property
     def is_jumping(self) -> bool:
-        """``True`` while the frog is in the air."""
-        return self.state == self.STATE_AIRBORNE
+        """``True`` while the frog is in the air (jumping or falling)."""
+        return self.state in (self.STATE_AIRBORNE, self.STATE_FALLING)
 
     @property
     def is_charging(self) -> bool:
@@ -158,6 +159,8 @@ class Frog(Entity):
             self._update_charging(dt, keys_pressed, keys_up)
         elif self.state == self.STATE_AIRBORNE:
             self._update_airborne(dt)
+        elif self.state == self.STATE_FALLING:
+            self._update_falling(dt, keys_pressed)
 
         self._sync_rect()
 
@@ -181,7 +184,6 @@ class Frog(Entity):
 
         # Apply horizontal movement
         self.x += self.vx * self.speed * dt
-        self.x = max(0, min(self.x, SCREEN_WIDTH - self.width))
 
         # Start charging a jump
         if pygame.K_SPACE in keys_down:
@@ -215,17 +217,46 @@ class Frog(Entity):
 
     def _update_airborne(self, dt: float) -> None:
         """Apply velocity and gravity while in the air."""
-        # Gravity
-        self.vy += self.gravity * dt
-
-        # Displacement
-        self.x += self.vx * dt
-        self.y += self.vy * dt
+        self._apply_physics(dt)
 
         # Landing: falling and reached (or passed) the original ground
         if self.vy > 0 and self.y >= self._ground_y:
             self.y = self._ground_y
             self.land()
+
+    def _update_falling(
+        self,
+        dt: float,
+        keys_pressed: pygame.key.ScancodeWrapper,
+    ) -> None:
+        """Apply gravity and allow horizontal steering after walking off a ledge.
+
+        Unlike :meth:`_update_airborne`, the frog has no launch impulse;
+        it simply falls under gravity while the player can steer left/right
+        at ``self.speed``.  Landing is handled externally by the scene's
+        collision resolution, which calls :meth:`land`.
+        """
+        self.vx = 0.0
+        if keys_pressed[pygame.K_a] or keys_pressed[pygame.K_LEFT]:
+            self.vx = -self.speed
+            self.facing = -1
+        if keys_pressed[pygame.K_d] or keys_pressed[pygame.K_RIGHT]:
+            self.vx = self.speed
+            self.facing = 1
+
+        self._apply_physics(dt)
+
+    # ── Movement ─────────────────────────────────────────────────────
+
+    def _apply_physics(self, dt: float) -> None:
+        """Apply gravity and integrate velocity into position.
+
+        Shared by :meth:`_update_airborne` and :meth:`_update_falling`
+        to avoid duplicating the core physics step.
+        """
+        self.vy += self.gravity * dt
+        self.x += self.vx * dt
+        self.y += self.vy * dt
 
     # ── Jump helpers ─────────────────────────────────────────────────
 
@@ -286,7 +317,7 @@ class Frog(Entity):
         internal landing check never fires before collision resolution
         handles the actual landing.
         """
-        self.state = self.STATE_AIRBORNE
+        self.state = self.STATE_FALLING
         self.vx = 0.0
         self.vy = 0.0
         # Ensure the internal "ground" is far below so gravity-based
