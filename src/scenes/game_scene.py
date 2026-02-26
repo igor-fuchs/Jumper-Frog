@@ -60,10 +60,18 @@ class GameScene(Scene):
             on_menu=self._go_menu,
         )
 
+        # ── Edge-triggered key sets (filled each frame by handle_events) ─
+        self._keys_down: set[int] = set()
+        self._keys_up: set[int] = set()
+
     # ── Scene interface ──────────────────────────────────────────────
 
     def handle_events(self, input_handler: InputHandler) -> None:
         """Process input: ESC toggles pause; delegates to overlay when paused."""
+        # Store edge-triggered key sets for update()
+        self._keys_down = input_handler.keys_down
+        self._keys_up = input_handler.keys_up
+
         # ESC toggles pause on / off
         if pygame.K_ESCAPE in input_handler.keys_down:
             self.paused = not self.paused
@@ -88,10 +96,51 @@ class GameScene(Scene):
 
         # Let the frog read keyboard state and move
         keys = pygame.key.get_pressed()
-        self.frog.update(dt, keys_pressed=keys)
+        self.frog.update(
+            dt,
+            keys_pressed=keys,
+            keys_down=self._keys_down,
+            keys_up=self._keys_up,
+        )
+
+        # Save position before collision for bounce / land detection
+        pre_x = self.frog.x
+        pre_y = self.frog.y
 
         # Resolve collisions between the frog and all walls
-        resolve_collisions(self.frog, self.walls)
+        collided = resolve_collisions(self.frog, self.walls)
+
+        # Airborne collision reactions
+        if self.frog.is_jumping and collided:
+            dx = self.frog.x - pre_x
+            dy = self.frog.y - pre_y
+
+            # Horizontal bounce: pushed sideways → reflect vx
+            if abs(dx) > 0.01:
+                self.frog.bounce_horizontal()
+
+            # Floor (pushed upward): land immediately
+            if dy < -0.01:
+                self.frog.land()
+            # Ceiling (pushed downward): cancel upward velocity
+            elif dy > 0.01:
+                self.frog.hit_ceiling()
+
+        # Ground-support check: if the frog is grounded but has no
+        # solid directly below it, it should start falling.  We probe
+        # one pixel below the frog's feet to detect support.
+        if not self.frog.is_jumping and not self.frog.is_charging:
+            probe = pygame.Rect(
+                self.frog.rect.x,
+                self.frog.rect.bottom,
+                self.frog.rect.width,
+                1,
+            )
+            supported = any(
+                probe.colliderect(w.rect) for w in self.walls
+            )
+            if not supported:
+                self.frog.start_falling()
 
     def render(self, screen: pygame.Surface) -> None:
         """Draw the level: background, walls, frog, and HUD."""
