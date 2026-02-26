@@ -74,6 +74,13 @@ class Frog(Entity):
     VISUAL_ON_EDGE_FRONT = "on_edge_front"
     VISUAL_ON_EDGE_BACK = "on_edge_back"
 
+    # Map physics states with a fixed visual to their sprite key.
+    _STATE_TO_VISUAL = {
+        STATE_CHARGING: VISUAL_PREPARING,
+        STATE_AIRBORNE: VISUAL_JUMPING,
+        STATE_FALLING:  VISUAL_FALLING,
+    }
+
     # ── Size defaults ────────────────────────────────────────────────
     DEFAULT_WIDTH = 36
     DEFAULT_HEIGHT = 26
@@ -83,7 +90,7 @@ class Frog(Entity):
 
     # ── Jump defaults (all exposed as properties for future tuning) ──
     DEFAULT_JUMP_ANGLE = 60.0
-    DEFAULT_JUMP_MAX_CHARGE = 1.0
+    DEFAULT_JUMP_MAX_CHARGE = 2.0
     DEFAULT_JUMP_MIN_POWER = 200.0
     DEFAULT_JUMP_MAX_POWER = 600.0
     DEFAULT_GRAVITY = 800.0
@@ -231,8 +238,8 @@ class Frog(Entity):
         self._sync_rect()
 
         # ── Visual state & animation ─────────────────────────────────
-        walls = kwargs.get("walls")
-        self._visual_state = self._resolve_visual_state(walls)
+        solids = kwargs.get("solids")
+        self._visual_state = self._resolve_visual_state(solids)
         self._advance_walk_animation(dt)
 
     # ── State updates ────────────────────────────────────────────────
@@ -319,7 +326,7 @@ class Frog(Entity):
 
     # ── Animation / visual helpers ────────────────────────────────────
 
-    def _resolve_visual_state(self, walls) -> str:
+    def _resolve_visual_state(self, solids) -> str:
         """Choose the visual state based on physics state and context.
 
         Priority (highest first):
@@ -330,28 +337,27 @@ class Frog(Entity):
         5. grounded + idle + near edge → on_edge_front / on_edge_back
         6. grounded + idle → default
         """
-        if self.state == self.STATE_CHARGING:
-            return self.VISUAL_PREPARING
-        if self.state == self.STATE_AIRBORNE:
-            return self.VISUAL_JUMPING
-        if self.state == self.STATE_FALLING:
-            return self.VISUAL_FALLING
+        fixed = self._STATE_TO_VISUAL.get(self.state)
+        if fixed is not None:
+            return fixed
 
         # Grounded — walking or idle
         if self.vx != 0:
             return self.VISUAL_WALKING
 
         # Idle — check for edge proximity
-        if walls is not None:
-            edge_dir = self._detect_edge(walls)
+        if solids is not None:
+            edge_dir = self._detect_edge(solids)
             if edge_dir is not None:
-                if edge_dir == self.facing:
-                    return self.VISUAL_ON_EDGE_FRONT
-                return self.VISUAL_ON_EDGE_BACK
+                return (
+                    self.VISUAL_ON_EDGE_FRONT
+                    if edge_dir == self.facing
+                    else self.VISUAL_ON_EDGE_BACK
+                )
 
         return self.VISUAL_DEFAULT
 
-    def _detect_edge(self, walls) -> int | None:
+    def _detect_edge(self, solids) -> int | None:
         """Return the direction of a nearby platform edge, or ``None``.
 
         A 1-pixel tall probe is placed at ``EDGE_THRESHOLD`` pixels to
@@ -377,10 +383,10 @@ class Frog(Entity):
         )
 
         near_left = not any(
-            left_probe.colliderect(w.rect) for w in walls
+            left_probe.colliderect(w.rect) for w in solids
         )
         near_right = not any(
-            right_probe.colliderect(w.rect) for w in walls
+            right_probe.colliderect(w.rect) for w in solids
         )
 
         if near_left and near_right:
@@ -407,6 +413,30 @@ class Frog(Entity):
 
     # ── Drawing ──────────────────────────────────────────────────────
 
+    def _get_charge_color(self) -> tuple[int, int, int]:
+        """Compute a tint colour based on the current charge ratio.
+
+        * 0 %–50 %: interpolate GREEN → YELLOW.
+        * 50 %–100 %: interpolate YELLOW → RED.
+
+        Returns the RGB tuple used to tint the preparing sprite via
+        ``pygame.Surface.fill`` with ``BLEND_RGB_MULT``.
+        """
+        ratio = self.charge_ratio
+        if ratio <= 0.5:
+            # green (50,180,50) → yellow (255,255,0)
+            t = ratio / 0.5
+            r = int(50 + (255 - 50) * t)
+            g = int(180 + (255 - 180) * t)
+            b = int(50 + (0 - 50) * t)
+        else:
+            # yellow (255,255,0) → red (255,0,0)
+            t = (ratio - 0.5) / 0.5
+            r = 255
+            g = int(255 * (1 - t))
+            b = 0
+        return (r, g, b)
+
     def draw(self, screen: pygame.Surface) -> None:
         """Render the current sprite instead of a plain rectangle.
 
@@ -431,6 +461,12 @@ class Frog(Entity):
         # Flip horizontally when facing left
         if self.facing == 1:
             sprite = pygame.transform.flip(sprite, True, False)
+
+        # Apply charge colour tint when preparing a jump
+        if self._visual_state == self.VISUAL_PREPARING:
+            tint_color = self._get_charge_color()
+            sprite = sprite.copy()
+            sprite.fill(tint_color, special_flags=pygame.BLEND_RGB_MULT)
 
         # Align the bottom of the sprite with the bottom of the hitbox
         draw_x = self.rect.x

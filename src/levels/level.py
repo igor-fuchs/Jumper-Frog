@@ -1,7 +1,7 @@
 """Level - abstract base class that defines the layout of a game level.
 
 Every concrete level (``Level1``, ``Level2`` …) inherits from ``Level``
-and overrides the hooks that provide walls, spawn position, and visual
+and overrides the hooks that provide solids, spawn position, and visual
 rendering of the background / scenery.
 
 Responsibilities of a ``Level`` subclass
@@ -25,6 +25,7 @@ from abc import ABC, abstractmethod
 import pygame
 
 from src.core.settings import SCREEN_WIDTH, SCREEN_HEIGHT, GRAY
+from src.entities.entity import Entity
 from src.entities.wall import Wall
 
 
@@ -44,10 +45,10 @@ class Level(ABC):
     def __init__(self, level_number: int):
         self.level_number = level_number
 
-    # ── Walls ────────────────────────────────────────────────────────
+    # ── Solids ────────────────────────────────────────────────────────
 
-    def build_level(self) -> list[Wall]:
-        """Return the full list of walls for this level.
+    def build_level(self) -> list[Entity]:
+        """Return the full list of solids for this level.
 
         Combines the shared boundary walls with the level-specific
         internal obstacles.  Called once when ``GameScene`` initialises.
@@ -66,11 +67,12 @@ class Level(ABC):
         ]
 
     @abstractmethod
-    def _build_obstacles(self) -> list[Wall]:
+    def _build_obstacles(self) -> list[Entity]:
         """Return the internal obstacles specific to this level.
 
         Subclasses **must** implement this, returning a (possibly empty)
-        list of ``Wall`` instances that form the level's unique layout.
+        list of ``Entity`` instances (``Wall``, ``MovingPlatform``, etc.)
+        that form the level's unique layout.
         """
 
     # ── Player spawn ─────────────────────────────────────────────────

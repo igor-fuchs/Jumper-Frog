@@ -1,10 +1,12 @@
-"""Level 1 - introductory arena with a few static walls.
+"""Level 1 - introductory arena with static and moving platforms.
 
-The first level is intentionally simple: a grey arena enclosed by
-boundary walls with three internal obstacles placed to demonstrate
-horizontal and vertical collision from multiple directions.
+The first level introduces the player to basic platforming: static
+walls for collision, and two moving platforms (one horizontal, one
+vertical) that demonstrate how dynamic surfaces work.
 """
 
+from src.entities.entity import Entity
+from src.entities.moving_platform import MovingPlatform
 from src.entities.wall import Wall
 from src.levels.level import Level
 
@@ -14,18 +16,32 @@ class Level1(Level):
 
     Internal obstacles
     ------------------
-    * A horizontal platform on the mid-left.
-    * A vertical wall on the mid-right.
-    * A low horizontal obstacle near the bottom.
+    * A large static platform at the bottom-left.
+    * A static platform at the upper-right area.
+    * A horizontal moving platform in the middle.
+    * A vertical moving platform on the right side.
     """
 
     def __init__(self):
         super().__init__(level_number=1)
 
-    def _build_obstacles(self) -> list[Wall]:
-        """Return the three internal walls that define level 1."""
+    def _build_obstacles(self) -> list[Entity]:
+        """Return the obstacles and moving platforms for level 1."""
         return [
-            Wall(200, 300, 120, 20),   # horizontal platform mid-left
-            Wall(500, 200, 20, 150),   # vertical wall mid-right
-            Wall(350, 450, 100, 20),   # low horizontal obstacle
+            # Static platforms
+            Wall(100, 450, 200, 20),    # lower-left static platform
+            Wall(550, 250, 150, 20),    # upper-right static platform
+
+            # Horizontal moving platform (travels 200 px to the right)
+            MovingPlatform(
+                x=200, y=320, width=120, height=20,
+                axis=MovingPlatform.AXIS_HORIZONTAL,
+                distance=200, speed=100,
+            ),
+            # Vertical moving platform (travels 180 px downward)
+            MovingPlatform(
+                x=600, y=350, width=100, height=20,
+                axis=MovingPlatform.AXIS_VERTICAL,
+                distance=180, speed=80,
+            ),
         ]

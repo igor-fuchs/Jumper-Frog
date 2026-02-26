@@ -1,7 +1,7 @@
 """Game scene - the main gameplay screen.
 
 Hosts the actual game level: a ``Level`` object defines the arena
-layout (background, walls, spawn point) while ``GameScene`` owns the
+layout (background, solids, spawn point) while ``GameScene`` owns the
 game-loop integration (input, update with collision, render order).
 
 The ``Level`` subclass provides all level-specific data via a clean
@@ -18,6 +18,7 @@ from src.core.collision import resolve_collisions
 from src.core.input_handler import InputHandler
 from src.core.settings import SCREEN_WIDTH, WHITE
 from src.entities.frog import Frog
+from src.entities.moving_platform import MovingPlatform
 from src.levels.level_registry import get_level
 from src.scenes.scene import Scene
 from src.ui.pause_overlay import PauseOverlay
@@ -49,8 +50,8 @@ class GameScene(Scene):
         spawn_x, spawn_y = self.level.get_spawn_position()
         self.frog = Frog(x=spawn_x, y=spawn_y)
 
-        # ── Walls (built once from the Level object) ─────────────────
-        self.walls = self.level.build_level()
+        # ── Solids (built once from the Level object) ───────────────
+        self.solids = self.level.build_level()
 
         # ── Pause state ──────────────────────────────────────────────
         self.paused = False
@@ -94,6 +95,11 @@ class GameScene(Scene):
         if self.paused:
             return
 
+        # Update moving platforms
+        for solid in self.solids:
+            if isinstance(solid, MovingPlatform):
+                solid.update(dt)
+
         # Let the frog read keyboard state and move
         keys = pygame.key.get_pressed()
         self.frog.update(
@@ -101,15 +107,15 @@ class GameScene(Scene):
             keys_pressed=keys,
             keys_down=self._keys_down,
             keys_up=self._keys_up,
-            walls=self.walls,
+            solids=self.solids,
         )
 
         # Save position before collision for bounce / land detection
         pre_x = self.frog.x
         pre_y = self.frog.y
 
-        # Resolve collisions between the frog and all walls
-        collided = resolve_collisions(self.frog, self.walls)
+        # Resolve collisions between the frog and all solids
+        collided = resolve_collisions(self.frog, self.solids)
 
         # Airborne collision reactions
         if self.frog.is_jumping and collided:
@@ -127,6 +133,9 @@ class GameScene(Scene):
             elif dy > 0.01:
                 self.frog.hit_ceiling()
 
+        # Carry the frog with any moving platform it is standing on.
+        self._carry_on_platform()
+
         # Ground-support check: if the frog is grounded but has no
         # solid directly below it, it should start falling.  We probe
         # one pixel below the frog's feet to detect support.
@@ -138,7 +147,7 @@ class GameScene(Scene):
                 1,
             )
             supported = any(
-                probe.colliderect(w.rect) for w in self.walls
+                probe.colliderect(s.rect) for s in self.solids
             )
             if not supported:
                 self.frog.start_falling()
@@ -148,9 +157,9 @@ class GameScene(Scene):
         # ── Background (delegated to the Level subclass) ─────────────
         self.level.render_background(screen)
 
-        # ── Walls ────────────────────────────────────────────────────
-        for wall in self.walls:
-            wall.draw(screen)
+        # ── Solids ────────────────────────────────────────────────
+        for solid in self.solids:
+            solid.draw(screen)
 
         # ── Player ───────────────────────────────────────────────────
         self.frog.draw(screen)
@@ -180,3 +189,31 @@ class GameScene(Scene):
         """Return to the main menu."""
         from src.scenes.menu_scene import MenuScene
         self.manager.switch(MenuScene(self.manager))
+
+    # ── Platform helpers ─────────────────────────────────────────
+
+    def _carry_on_platform(self) -> None:
+        """Move the frog along with any moving platform it is standing on.
+
+        A 1-pixel probe below the frog's feet detects which solid
+        supports it.  If that solid is a ``MovingPlatform``, the frog
+        is displaced by the platform's frame delta.
+        """
+        if self.frog.is_jumping:
+            return
+
+        probe = pygame.Rect(
+            self.frog.rect.x,
+            self.frog.rect.bottom,
+            self.frog.rect.width,
+            1,
+        )
+        for solid in self.solids:
+            if (
+                isinstance(solid, MovingPlatform)
+                and probe.colliderect(solid.rect)
+            ):
+                self.frog.x += solid.dx
+                self.frog.y += solid.dy
+                self.frog._sync_rect()  # pylint: disable=protected-access
+                break
