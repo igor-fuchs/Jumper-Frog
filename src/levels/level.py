@@ -21,12 +21,19 @@ factory, calls the build helpers once in ``__init__``, and delegates
 """
 
 from abc import ABC, abstractmethod
+import os
 
 import pygame
 
 from src.core.settings import SCREEN_WIDTH, SCREEN_HEIGHT, GRAY
 from src.entities.entity import Entity
 from src.entities.wall import Wall
+
+# Directory containing background images (root/assets/background/).
+_BG_DIR = os.path.join(
+    os.path.dirname(__file__), os.pardir, os.pardir,
+    "assets", "background",
+)
 
 
 # Thickness (pixels) of the boundary walls that enclose every level.
@@ -44,6 +51,7 @@ class Level(ABC):
 
     def __init__(self, level_number: int):
         self.level_number = level_number
+        self._bg_image: pygame.Surface | None = self._load_background()
 
     # ── Solids ────────────────────────────────────────────────────────
 
@@ -103,10 +111,25 @@ class Level(ABC):
 
     # ── Rendering ────────────────────────────────────────────────────
 
+    def _load_background(self) -> pygame.Surface | None:
+        """Load the background image for this level, if available.
+
+        Looks for ``assets/background/level<N>.png`` where *N* is the
+        level number.  Returns ``None`` when the file does not exist.
+        """
+        path = os.path.join(_BG_DIR, f"level{self.level_number}.png")
+        if not os.path.isfile(path):
+            return None
+        img = pygame.image.load(path).convert()
+        return pygame.transform.scale(img, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
     def render_background(self, screen: pygame.Surface) -> None:
         """Draw the level background before entities are rendered.
 
-        The default is a simple solid grey fill.  Subclasses can
-        override this to paint terrain, tiles, or decorative elements.
+        If a background image exists it is drawn scaled to the screen;
+        otherwise the default solid grey fill is used.
         """
-        screen.fill(GRAY)
+        if self._bg_image is not None:
+            screen.blit(self._bg_image, (0, 0))
+        else:
+            screen.fill(GRAY)

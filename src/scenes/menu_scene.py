@@ -1,5 +1,6 @@
 """Menu scene - main menu screen."""
 
+import os
 import sys
 
 import pygame
@@ -12,6 +13,11 @@ from src.core.settings import (
 from src.scenes.scene import Scene
 from src.ui.button import Button
 from src.ui.textbox import TextBox
+
+_BG_PATH = os.path.join(
+    os.path.dirname(__file__), os.pardir, os.pardir,
+    "assets", "background", "menu.png",
+)
 
 
 class MenuScene(Scene):
@@ -57,6 +63,14 @@ class MenuScene(Scene):
             "Criado por: Igor Fuchs Pereira",
         )
 
+        # ── Background image ─────────────────────────────────────────
+        self._bg_image: pygame.Surface | None = None
+        if os.path.isfile(_BG_PATH):
+            img = pygame.image.load(_BG_PATH).convert()
+            self._bg_image = pygame.transform.scale(
+                img, (SCREEN_WIDTH, SCREEN_HEIGHT),
+            )
+
     # ── Event handlers ───────────────────────────────────────────────
 
     def _on_start(self) -> None:
@@ -81,15 +95,18 @@ class MenuScene(Scene):
         pass  # no dynamic logic yet
 
     def render(self, screen: pygame.Surface) -> None:
-        # Background gradient (two halves for a subtle effect)
-        top_color = (20, 60, 20)
-        bottom_color = (10, 30, 10)
-        top_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT // 2)
-        bot_rect = pygame.Rect(
-            0, SCREEN_HEIGHT // 2, SCREEN_WIDTH, SCREEN_HEIGHT // 2
-        )
-        screen.fill(top_color, top_rect)
-        screen.fill(bottom_color, bot_rect)
+        # Background image or fallback gradient
+        if self._bg_image is not None:
+            screen.blit(self._bg_image, (0, 0))
+        else:
+            top_color = (20, 60, 20)
+            bottom_color = (10, 30, 10)
+            top_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT // 2)
+            bot_rect = pygame.Rect(
+                0, SCREEN_HEIGHT // 2, SCREEN_WIDTH, SCREEN_HEIGHT // 2
+            )
+            screen.fill(top_color, top_rect)
+            screen.fill(bottom_color, bot_rect)
 
         # Decorative line
         pygame.draw.line(

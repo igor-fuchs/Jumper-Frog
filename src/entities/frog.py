@@ -372,10 +372,10 @@ class Frog(Entity):
     def _detect_edge(self, solids) -> int | None:
         """Return the direction of a nearby platform edge, or ``None``.
 
-        A 1-pixel tall probe is placed at ``EDGE_THRESHOLD`` pixels to
-        the left and right of the frog's horizontal centre, one pixel
-        below its feet.  If either probe finds no supporting wall the
-        frog is considered to be near an edge in that direction.
+        Two small probes are placed at ``EDGE_THRESHOLD`` pixels to
+        the left and right of the frog's horizontal centre, just
+        below its feet.  The probes are a few pixels tall to tolerate
+        small vertical gaps caused by moving-platform motion.
 
         Returns
         -------
@@ -388,10 +388,10 @@ class Frog(Entity):
         bottom = self.rect.bottom
 
         left_probe = pygame.Rect(
-            cx - self.EDGE_THRESHOLD, bottom, 1, 1,
+            cx - self.EDGE_THRESHOLD, bottom, 1, 6,
         )
         right_probe = pygame.Rect(
-            cx + self.EDGE_THRESHOLD, bottom, 1, 1,
+            cx + self.EDGE_THRESHOLD, bottom, 1, 6,
         )
 
         near_left = not any(
