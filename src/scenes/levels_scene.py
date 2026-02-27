@@ -14,6 +14,7 @@ from src.core.settings import (
     DARK_GREEN, GREEN, LIGHT_GREEN, WHITE, BLACK,
     DARK_GRAY, GRAY, LIGHT_GRAY,
 )
+from src.levels.level_registry import total_levels
 from src.scenes.scene import Scene
 from src.ui.back_button import BackButton
 
@@ -23,7 +24,7 @@ class LevelsScene(Scene):
 
     SQUARE_SIZE = 120
     SQUARE_GAP = 40
-    NUM_LEVELS = 3
+    NUM_LEVELS = total_levels()
 
     def __init__(self, manager):
         super().__init__(manager)

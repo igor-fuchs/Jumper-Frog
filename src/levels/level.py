@@ -88,6 +88,19 @@ class Level(ABC):
         y = SCREEN_HEIGHT - 80
         return (x, y)
 
+    # ── Trophy ───────────────────────────────────────────────────────
+
+    def get_trophy_position(self) -> tuple[float, float]:
+        """Return the (x, y) position where the goal trophy is placed.
+
+        The default places the trophy at the top-centre of the arena.
+        Override in a subclass to customise.
+        """
+        from src.entities.trophy import Trophy  # lazy import
+        x = SCREEN_WIDTH // 2 - Trophy.DEFAULT_SIZE // 2
+        y = _BOUNDARY_THICKNESS + 20
+        return (x, y)
+
     # ── Rendering ────────────────────────────────────────────────────
 
     def render_background(self, screen: pygame.Surface) -> None:

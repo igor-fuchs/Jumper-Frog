@@ -1,6 +1,6 @@
-"""Level 1 - introductory arena with static and moving platforms.
+"""Level 2 - intermediate arena with static and moving platforms.
 
-The first level introduces the player to basic platforming: static
+The second level introduces more complex platforming: additional static
 walls for collision, and two moving platforms (one horizontal, one
 vertical) that demonstrate how dynamic surfaces work.
 """
@@ -11,8 +11,8 @@ from src.entities.wall import Wall
 from src.levels.level import Level
 
 
-class Level1(Level):
-    """Concrete layout for level 1.
+class Level2(Level):
+    """Concrete layout for level 2.
 
     Internal obstacles
     ------------------
@@ -23,10 +23,10 @@ class Level1(Level):
     """
 
     def __init__(self):
-        super().__init__(level_number=1)
+        super().__init__(level_number=2)
 
     def _build_obstacles(self) -> list[Entity]:
-        """Return the obstacles and moving platforms for level 1."""
+        """Return the obstacles and moving platforms for level 2."""
         return [
             # Static platforms
             Wall(100, 450, 200, 20),    # lower-left static platform

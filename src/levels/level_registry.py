@@ -10,14 +10,16 @@ registered in the ``_REGISTRY`` dict below — no changes required in
 
 from src.levels.level import Level
 from src.levels.level_1 import Level1
+from src.levels.level_2 import Level2
+from src.levels.level_3 import Level3
 
 
 # ── Registry ─────────────────────────────────────────────────────────
 # Maps 1-based level numbers → callables that return a Level instance.
 _REGISTRY: dict[int, type[Level]] = {
     1: Level1,
-    # 2: Level2,  # add future levels here
-    # 3: Level3,
+    2: Level2,
+    3: Level3,
 }
 
 
@@ -47,3 +49,8 @@ def get_level(number: int) -> Level:
             f"Available levels: {sorted(_REGISTRY.keys())}"
         )
     return level_cls()
+
+
+def total_levels() -> int:
+    """Return the number of registered levels."""
+    return len(_REGISTRY)

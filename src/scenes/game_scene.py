@@ -19,9 +19,11 @@ from src.core.input_handler import InputHandler
 from src.core.settings import SCREEN_WIDTH, WHITE
 from src.entities.frog import Frog
 from src.entities.moving_platform import MovingPlatform
-from src.levels.level_registry import get_level
+from src.entities.trophy import Trophy
+from src.levels.level_registry import get_level, total_levels
 from src.scenes.scene import Scene
 from src.ui.pause_overlay import PauseOverlay
+from src.ui.victory_overlay import VictoryOverlay
 
 
 class GameScene(Scene):
@@ -53,6 +55,14 @@ class GameScene(Scene):
         # ── Solids (built once from the Level object) ───────────────
         self.solids = self.level.build_level()
 
+        # ── Trophy (level goal) ───────────────────────────────
+        trophy_x, trophy_y = self.level.get_trophy_position()
+        self.trophy = Trophy(trophy_x, trophy_y)
+
+        # ── Victory state ─────────────────────────────────────
+        self.completed = False
+        self.victory_overlay: VictoryOverlay | None = None
+
         # ── Pause state ──────────────────────────────────────────────
         self.paused = False
         self.pause_overlay = PauseOverlay(
@@ -69,9 +79,15 @@ class GameScene(Scene):
 
     def handle_events(self, input_handler: InputHandler) -> None:
         """Process input: ESC toggles pause; delegates to overlay when paused."""
-        # Store edge-triggered key sets for update()
         self._keys_down = input_handler.keys_down
         self._keys_up = input_handler.keys_up
+
+        # Victory overlay takes priority
+        if self.completed and self.victory_overlay is not None:
+            self.victory_overlay.handle_event(
+                input_handler.mouse_pos, input_handler.mouse_clicked,
+            )
+            return
 
         # ESC toggles pause on / off
         if pygame.K_ESCAPE in input_handler.keys_down:
@@ -79,7 +95,6 @@ class GameScene(Scene):
             return
 
         if self.paused:
-            # While paused only the overlay receives input
             self.pause_overlay.handle_event(
                 input_handler.mouse_pos, input_handler.mouse_clicked,
             )
@@ -92,7 +107,7 @@ class GameScene(Scene):
         freezing every entity (frog movement, jump physics,
         vehicle / log animations, etc.).
         """
-        if self.paused:
+        if self.paused or self.completed:
             return
 
         # Update moving platforms
@@ -152,6 +167,10 @@ class GameScene(Scene):
             if not supported:
                 self.frog.start_falling()
 
+        # ── Trophy collision ───────────────────────────────────────
+        if self.frog.collides_with(self.trophy):
+            self._complete_level()
+
     def render(self, screen: pygame.Surface) -> None:
         """Draw the level: background, walls, frog, and HUD."""
         # ── Background (delegated to the Level subclass) ─────────────
@@ -160,6 +179,10 @@ class GameScene(Scene):
         # ── Solids ────────────────────────────────────────────────
         for solid in self.solids:
             solid.draw(screen)
+
+        # ── Trophy ────────────────────────────────────────────────
+        if not self.completed:
+            self.trophy.draw(screen)
 
         # ── Player ───────────────────────────────────────────────────
         self.frog.draw(screen)
@@ -175,6 +198,10 @@ class GameScene(Scene):
         if self.paused:
             self.pause_overlay.draw(screen)
 
+        # ── Victory overlay ───────────────────────────────────────
+        if self.completed and self.victory_overlay is not None:
+            self.victory_overlay.draw(screen)
+
     # ── Pause callbacks ──────────────────────────────────────────────
 
     def _resume(self) -> None:
@@ -189,6 +216,24 @@ class GameScene(Scene):
         """Return to the main menu."""
         from src.scenes.menu_scene import MenuScene
         self.manager.switch(MenuScene(self.manager))
+
+    # ── Victory helpers ──────────────────────────────────────────
+
+    def _complete_level(self) -> None:
+        """Mark the level as completed and show the victory overlay."""
+        self.completed = True
+        is_last = self._level_number >= total_levels()
+        self.victory_overlay = VictoryOverlay(
+            is_last_level=is_last,
+            on_next_level=self._go_next_level if not is_last else None,
+            on_menu=self._go_menu,
+        )
+
+    def _go_next_level(self) -> None:
+        """Advance to the next level."""
+        self.manager.switch(
+            GameScene(self.manager, level=self._level_number + 1),
+        )
 
     # ── Platform helpers ─────────────────────────────────────────
 
