@@ -9,6 +9,7 @@ player to the main menu.
 import pygame
 
 from src.core.input_handler import InputHandler
+from src.core.progress import get_unlocked
 from src.core.settings import (
     SCREEN_WIDTH, SCREEN_HEIGHT,
     DARK_GREEN, GREEN, LIGHT_GREEN, WHITE, BLACK,
@@ -29,8 +30,8 @@ class LevelsScene(Scene):
     def __init__(self, manager):
         super().__init__(manager)
 
-        # How many levels are unlocked (1-based: value 1 = level 1 unlocked)
-        self.unlocked: int = 1
+        # How many levels are unlocked (read from shared progress)
+        self.unlocked: int = get_unlocked()
 
         # Fonts
         self.title_font = pygame.font.SysFont("arial", 52, bold=True)
