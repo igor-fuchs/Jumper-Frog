@@ -12,15 +12,7 @@ from src.levels.level import Level
 
 
 class Level2(Level):
-    """Concrete layout for level 2.
-
-    Internal obstacles
-    ------------------
-    * A large static platform at the bottom-left.
-    * A static platform at the upper-right area.
-    * A horizontal moving platform in the middle.
-    * A vertical moving platform on the right side.
-    """
+    """Concrete layout for level 2."""
 
     def __init__(self):
         super().__init__(level_number=2)
@@ -28,29 +20,38 @@ class Level2(Level):
     def _build_obstacles(self) -> list[Entity]:
         """Return the obstacles and moving platforms for level 2."""
         return [
-            # Static platforms
-            Wall(100, 450, 200, 20),    # lower-left static platform
-            Wall(550, 250, 150, 20),    # upper-right static platform
 
-            # Horizontal moving platform (travels 200 px to the right)
+            # connected platforms
+            Wall(530, 250, 170, 20),    # lower-right static platform
+            Wall(530, 270, 20, 270),    # lower-right static wall
+
+            # Vertical moving platform 
             MovingPlatform(
-                x=200, y=320, width=120, height=20,
-                axis=MovingPlatform.AXIS_HORIZONTAL,
-                distance=200, speed=100,
-            ),
-            # Vertical moving platform (travels 180 px downward)
-            MovingPlatform(
-                x=600, y=350, width=100, height=20,
+                x=610, y=350, width=100, height=20,
                 axis=MovingPlatform.AXIS_VERTICAL,
                 distance=180, speed=80,
             ),
+
+            # middle plataform
+            MovingPlatform(
+                x=90, y=400, width=100, height=20,
+                axis=MovingPlatform.AXIS_HORIZONTAL,
+                distance=250, speed=200,
+            ),
+
+            # connected platforms
+            Wall(90, 270, 80, 20),    # top-left static platform
+            Wall(150, 170, 20, 100),    # top-left static wall
+
+            Wall(370, 100, 60, 20),    # trophy platform
         ]
 
     def get_trophy_position(self) -> tuple[float, float]:
         """Place the trophy on top of the upper-right static platform."""
-        # The platform is at (550, 250, 150, 20) → centre it on top
         from src.entities.trophy import Trophy  # lazy import
+        x = 400
+        y = 100
         return (
-            550 + 150 // 2 - Trophy.DEFAULT_SIZE // 2,
-            250 - Trophy.DEFAULT_SIZE,
+            x - Trophy.DEFAULT_SIZE // 2,
+            y - Trophy.DEFAULT_SIZE,
         )
