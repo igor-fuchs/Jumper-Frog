@@ -1,4 +1,4 @@
-"""Progress tracker — keeps track of the highest unlocked level.
+"""Progress tracker — keeps track of unlocked and completed levels.
 
 This module provides simple functions to query and advance the
 player's progression.  State is kept in-memory (resets on restart).
@@ -7,9 +7,12 @@ Usage
 -----
 * ``get_unlocked()`` → ``int``  — highest level the player may play.
 * ``unlock_next(current)``      — unlock the level after *current*.
+* ``mark_completed(level)``     — record a level as finished.
+* ``is_completed(level)``       — check whether a level was finished.
 """
 
-_unlocked: int = 1  # level 1 is always available
+_unlocked: int = 1  # level 1 is always available  # pylint: disable=invalid-name
+_completed: set[int] = set()  # pylint: disable=invalid-name
 
 
 def get_unlocked() -> int:
@@ -27,5 +30,14 @@ def unlock_next(current_level: int) -> None:
     """
     global _unlocked  # pylint: disable=global-statement
     next_level = current_level + 1
-    if next_level > _unlocked:
-        _unlocked = next_level
+    _unlocked = max(_unlocked, next_level)
+
+
+def mark_completed(level: int) -> None:
+    """Record *level* as completed."""
+    _completed.add(level)
+
+
+def is_completed(level: int) -> bool:
+    """Return ``True`` if the player has completed *level*."""
+    return level in _completed

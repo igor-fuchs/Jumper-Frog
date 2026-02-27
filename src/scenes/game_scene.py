@@ -16,7 +16,7 @@ import pygame
 
 from src.core.collision import resolve_collisions
 from src.core.input_handler import InputHandler
-from src.core.progress import unlock_next
+from src.core.progress import mark_completed, unlock_next
 from src.core.settings import SCREEN_WIDTH, WHITE
 from src.entities.frog import Frog
 from src.entities.moving_platform import MovingPlatform
@@ -227,6 +227,7 @@ class GameScene(Scene):
         """Mark the level as completed and show the victory overlay."""
         self.completed = True
         unlock_next(self._level_number)
+        mark_completed(self._level_number)
         is_last = self._level_number >= total_levels()
         self.victory_overlay = VictoryOverlay(
             is_last_level=is_last,

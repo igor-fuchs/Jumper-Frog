@@ -1,15 +1,18 @@
 """Levels scene - level selection screen.
 
 Displays a grid of selectable level squares.  Locked levels are shown
-with a dimmed appearance and a lock icon; unlocked levels react to
-hover and clicks.  A ``BackButton`` in the top-left corner returns the
-player to the main menu.
+with a dimmed appearance and a padlock icon; unlocked levels react to
+hover and clicks.  Completed levels display a mini trophy.
+A ``BackButton`` in the top-left corner returns the player to the
+main menu.
 """
+
+import os
 
 import pygame
 
 from src.core.input_handler import InputHandler
-from src.core.progress import get_unlocked
+from src.core.progress import get_unlocked, is_completed
 from src.core.settings import (
     SCREEN_WIDTH, SCREEN_HEIGHT,
     DARK_GREEN, GREEN, LIGHT_GREEN, WHITE, BLACK,
@@ -18,6 +21,14 @@ from src.core.settings import (
 from src.levels.level_registry import total_levels
 from src.scenes.scene import Scene
 from src.ui.back_button import BackButton
+
+# ── Asset paths ──────────────────────────────────────────────────────
+_ASSETS_DIR = os.path.join(
+    os.path.dirname(__file__), os.pardir, os.pardir, "assets",
+)
+_BG_PATH = os.path.join(_ASSETS_DIR, "background", "menu.png")
+_PADLOCK_PATH = os.path.join(_ASSETS_DIR, "icons", "padlock.png")
+_MINI_TROPHY_PATH = os.path.join(_ASSETS_DIR, "icons", "mini_trophy.png")
 
 
 class LevelsScene(Scene):
@@ -36,7 +47,22 @@ class LevelsScene(Scene):
         # Fonts
         self.title_font = pygame.font.SysFont("arial", 52, bold=True)
         self.level_font = pygame.font.SysFont("arial", 40, bold=True)
-        self.lock_font = pygame.font.SysFont("arial", 28)
+
+        # ── Icons ────────────────────────────────────────────────────
+        self._padlock_icon = pygame.transform.scale(
+            pygame.image.load(_PADLOCK_PATH).convert_alpha(), (32, 32),
+        )
+        self._trophy_icon = pygame.transform.scale(
+            pygame.image.load(_MINI_TROPHY_PATH).convert_alpha(), (24, 24),
+        )
+
+        # ── Background image (same as menu) ──────────────────────────
+        self._bg_image: pygame.Surface | None = None
+        if os.path.isfile(_BG_PATH):
+            img = pygame.image.load(_BG_PATH).convert()
+            self._bg_image = pygame.transform.scale(
+                img, (SCREEN_WIDTH, SCREEN_HEIGHT),
+            )
 
         # ── Back button (reusable UI component) ─────────────────────
         self.back_button = BackButton(callback=self._go_back)
@@ -84,8 +110,11 @@ class LevelsScene(Scene):
         pass
 
     def render(self, screen: pygame.Surface) -> None:
-        # Background
-        screen.fill((20, 60, 20))
+        # Background image or fallback solid colour
+        if self._bg_image is not None:
+            screen.blit(self._bg_image, (0, 0))
+        else:
+            screen.fill((20, 60, 20))
 
         # ── Back button ──────────────────────────────────────────────
         self.back_button.draw(screen)
@@ -100,12 +129,6 @@ class LevelsScene(Scene):
         title = self.title_font.render("Fases", True, LIGHT_GREEN)
         title_rect = title.get_rect(centerx=SCREEN_WIDTH // 2, y=50)
         screen.blit(title, title_rect)
-
-        # Decorative line
-        pygame.draw.line(
-            screen, DARK_GREEN,
-            (80, 120), (SCREEN_WIDTH - 80, 120), 2,
-        )
 
         # ── Level squares ────────────────────────────────────────────
         for i, rect in enumerate(self.level_rects):
@@ -137,21 +160,27 @@ class LevelsScene(Scene):
                 num_surf = self.level_font.render(str(level_num), True, WHITE)
                 num_rect = num_surf.get_rect(center=rect.center)
                 screen.blit(num_surf, num_rect)
+
+                # Show mini trophy if the level has been completed
+                if is_completed(level_num):
+                    trophy_rect = self._trophy_icon.get_rect(
+                        bottomright=(rect.right - 6, rect.bottom - 6),
+                    )
+                    screen.blit(self._trophy_icon, trophy_rect)
             else:
-                # Show number (dimmed) + lock symbol
+                # Show number (dimmed) + padlock icon
                 num_surf = self.level_font.render(
                     str(level_num), True, LIGHT_GRAY,
                 )
                 num_rect = num_surf.get_rect(
-                    centerx=rect.centerx, centery=rect.centery - 10,
+                    centerx=rect.centerx, centery=rect.centery - 14,
                 )
                 screen.blit(num_surf, num_rect)
 
-                lock_surf = self.lock_font.render("\U0001F512", True, LIGHT_GRAY)
-                lock_rect = lock_surf.get_rect(
-                    centerx=rect.centerx, centery=rect.centery + 25,
+                padlock_rect = self._padlock_icon.get_rect(
+                    centerx=rect.centerx, centery=rect.centery + 24,
                 )
-                screen.blit(lock_surf, lock_rect)
+                screen.blit(self._padlock_icon, padlock_rect)
 
     # ── Navigation helpers ───────────────────────────────────────────
 
