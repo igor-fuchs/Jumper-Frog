@@ -413,29 +413,41 @@ class Frog(Entity):
 
     # ── Drawing ──────────────────────────────────────────────────────
 
-    def _get_charge_color(self) -> tuple[int, int, int]:
-        """Compute a tint colour based on the current charge ratio.
+    def _get_charge_tint(self) -> tuple[int, int, int] | None:
+        """Return a multiplicative tint colour for the current charge.
 
-        * 0 %–50 %: interpolate GREEN → YELLOW.
-        * 50 %–100 %: interpolate YELLOW → RED.
+        * 0 %–10 %: ``None`` — keep original sprite colours.
+        * 10 %–100 %: progressively shift from neutral to warm
+          orange-red.  Values stay close to 255 so the sprite is
+          **warmed** rather than darkened.
 
-        Returns the RGB tuple used to tint the preparing sprite via
-        ``pygame.Surface.fill`` with ``BLEND_RGB_MULT``.
+        The returned RGB is meant for ``pygame.BLEND_RGB_MULT``.
         """
         ratio = self.charge_ratio
-        if ratio <= 0.5:
-            # green (50,180,50) → yellow (255,255,0)
-            t = ratio / 0.5
-            r = int(50 + (255 - 50) * t)
-            g = int(180 + (255 - 180) * t)
-            b = int(50 + (0 - 50) * t)
-        else:
-            # yellow (255,255,0) → red (255,0,0)
-            t = (ratio - 0.5) / 0.5
-            r = 255
-            g = int(255 * (1 - t))
-            b = 0
+        if ratio <= 0.1:
+            return None
+        t = (ratio - 0.1) / 0.9  # normalise 10 %–100 % → 0.0–1.0
+
+        # (255,255,255) = no change.  Gradually pull G and B down to
+        # shift the hue toward orange / red without crushing channels.
+        r = 255
+        g = int(255 - 120 * t)   # 255 → 135
+        b = int(255 - 190 * t)   # 255 → 65
         return (r, g, b)
+
+    def _get_charge_glow(self) -> tuple[int, int, int] | None:
+        """Return an additive glow colour for the current charge.
+
+        Creates a subtle warm brightness on top of the hue-shift so
+        the frog looks like it is glowing with energy.
+        """
+        ratio = self.charge_ratio
+        if ratio <= 0.1:
+            return None
+        t = (ratio - 0.1) / 0.9
+
+        glow = int(50 * t)       # 0 → 50
+        return (glow, glow // 3, 0)
 
     def draw(self, screen: pygame.Surface) -> None:
         """Render the current sprite instead of a plain rectangle.
@@ -462,11 +474,17 @@ class Frog(Entity):
         if self.facing == 1:
             sprite = pygame.transform.flip(sprite, True, False)
 
-        # Apply charge colour tint when preparing a jump
+        # Apply charge colour effect when preparing a jump
         if self._visual_state == self.VISUAL_PREPARING:
-            tint_color = self._get_charge_color()
-            sprite = sprite.copy()
-            sprite.fill(tint_color, special_flags=pygame.BLEND_RGB_MULT)
+            tint = self._get_charge_tint()
+            if tint is not None:
+                sprite = sprite.copy()
+                # Warm the hue (multiplicative — preserves alpha)
+                sprite.fill(tint, special_flags=pygame.BLEND_RGB_MULT)
+                # Add a subtle glow on top (additive — preserves alpha)
+                glow = self._get_charge_glow()
+                if glow is not None:
+                    sprite.fill(glow, special_flags=pygame.BLEND_RGB_ADD)
 
         # Align the bottom of the sprite with the bottom of the hitbox
         draw_x = self.rect.x
