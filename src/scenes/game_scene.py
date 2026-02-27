@@ -115,6 +115,11 @@ class GameScene(Scene):
             if isinstance(solid, MovingPlatform):
                 solid.update(dt)
 
+        # Carry the frog with any moving platform it is standing on.
+        # Must happen *right after* platforms move so the frog stays
+        # glued to the surface before ground-support checks run.
+        self._carry_on_platform()
+
         # Let the frog read keyboard state and move
         keys = pygame.key.get_pressed()
         self.frog.update(
@@ -148,18 +153,16 @@ class GameScene(Scene):
             elif dy > 0.01:
                 self.frog.hit_ceiling()
 
-        # Carry the frog with any moving platform it is standing on.
-        self._carry_on_platform()
-
         # Ground-support check: if the frog is grounded but has no
         # solid directly below it, it should start falling.  We probe
-        # one pixel below the frog's feet to detect support.
+        # a few pixels below the frog's feet to account for small
+        # gaps created by moving-platform motion between frames.
         if not self.frog.is_jumping and not self.frog.is_charging:
             probe = pygame.Rect(
                 self.frog.rect.x,
                 self.frog.rect.bottom,
                 self.frog.rect.width,
-                1,
+                4,
             )
             supported = any(
                 probe.colliderect(s.rect) for s in self.solids
@@ -240,9 +243,11 @@ class GameScene(Scene):
     def _carry_on_platform(self) -> None:
         """Move the frog along with any moving platform it is standing on.
 
-        A 1-pixel probe below the frog's feet detects which solid
+        A small probe below the frog's feet detects which solid
         supports it.  If that solid is a ``MovingPlatform``, the frog
-        is displaced by the platform's frame delta.
+        is displaced by the platform's frame delta.  The probe is a
+        few pixels tall to bridge tiny gaps that appear when a
+        vertical platform moves away from the frog between frames.
         """
         if self.frog.is_jumping:
             return
@@ -251,7 +256,7 @@ class GameScene(Scene):
             self.frog.rect.x,
             self.frog.rect.bottom,
             self.frog.rect.width,
-            1,
+            6,
         )
         for solid in self.solids:
             if (
