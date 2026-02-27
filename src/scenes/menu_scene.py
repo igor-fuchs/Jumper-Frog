@@ -8,11 +8,10 @@ import pygame
 from src.core.input_handler import InputHandler
 from src.core.settings import (
     SCREEN_WIDTH, SCREEN_HEIGHT,
-    DARK_GREEN, LIGHT_GREEN, BLACK
+    LIGHT_GREEN, BLACK
 )
 from src.scenes.scene import Scene
 from src.ui.button import Button
-from src.ui.textbox import TextBox
 
 _BG_PATH = os.path.join(
     os.path.dirname(__file__), os.pardir, os.pardir,
@@ -51,17 +50,8 @@ class MenuScene(Scene):
             )
             self.buttons.append(Button(rect, label, cb))
 
-        # ── Credits text box ─────────────────────────────────────────
-        tb_width, tb_height = 300, 36
-        self.textbox = TextBox(
-            pygame.Rect(
-                cx - tb_width // 2,
-                SCREEN_HEIGHT - 60,
-                tb_width,
-                tb_height,
-            ),
-            "Criado por: Igor Fuchs Pereira",
-        )
+        # ── Credits text ───────────────────────────────────────────────
+        self.credit_font = pygame.font.SysFont("arial", 16, bold=True)
 
         # ── Background image ─────────────────────────────────────────
         self._bg_image: pygame.Surface | None = None
@@ -108,12 +98,6 @@ class MenuScene(Scene):
             screen.fill(top_color, top_rect)
             screen.fill(bottom_color, bot_rect)
 
-        # Decorative line
-        pygame.draw.line(
-            screen, DARK_GREEN,
-            (80, 230), (SCREEN_WIDTH - 80, 230), 2,
-        )
-
         # Title shadow
         shadow = self.title_shadow_font.render("Frog Jumper", True, BLACK)
         shadow_rect = shadow.get_rect(
@@ -131,4 +115,6 @@ class MenuScene(Scene):
             btn.draw(screen)
 
         # Credits
-        self.textbox.draw(screen)
+        credits_box = self.credit_font.render("Criado por: Igor Fuchs Pereira", True, LIGHT_GREEN)
+        credits_rect = credits_box.get_rect(centerx=SCREEN_WIDTH // 2, y=SCREEN_HEIGHT - 40)
+        screen.blit(credits_box, credits_rect)

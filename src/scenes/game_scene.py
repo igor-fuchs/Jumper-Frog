@@ -195,7 +195,7 @@ class GameScene(Scene):
         hud_text = self.hud_font.render(
             f"Fase {self.level.level_number}", True, WHITE,
         )
-        hud_rect = hud_text.get_rect(centerx=SCREEN_WIDTH // 2, y=2)
+        hud_rect = hud_text.get_rect(centerx=SCREEN_WIDTH // 2, y=20)
         screen.blit(hud_text, hud_rect)
 
         # ── Pause overlay (drawn last so it covers everything) ───────
