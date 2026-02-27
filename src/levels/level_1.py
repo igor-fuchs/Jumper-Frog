@@ -12,15 +12,7 @@ from src.levels.level import Level
 
 
 class Level1(Level):
-    """Concrete layout for level 1.
-
-    Internal obstacles
-    ------------------
-    * A large static platform at the bottom-left.
-    * A static platform at the upper-right area.
-    * A horizontal moving platform in the middle.
-    * A vertical moving platform on the right side.
-    """
+    """Concrete layout for level 1."""
 
     def __init__(self):
         super().__init__(level_number=1)
@@ -28,29 +20,34 @@ class Level1(Level):
     def _build_obstacles(self) -> list[Entity]:
         """Return the obstacles and moving platforms for level 1."""
         return [
-            # Static platforms
-            Wall(100, 450, 200, 20),    # lower-left static platform
-            Wall(550, 250, 150, 20),    # upper-right static platform
+            Wall(290, 470, 80, 20),
 
-            # Horizontal moving platform (travels 200 px to the right)
+            Wall(560, 420, 80, 20),      # landing after swing
+            Wall(640, 360, 20, 80),     # vertical wall barrier
+
+            Wall(660, 360, 60, 20),      # ledge 1 (right side)
+            Wall(500, 300, 70, 20),      # ledge 2 (middle)
+
+            Wall(220, 240, 80, 20),      # ledge 3 (left side)
+
+            Wall(200, 190, 20, 70),      # small wall
+            Wall(140, 190, 60, 20),      # small ledge
+
             MovingPlatform(
-                x=200, y=320, width=120, height=20,
+                x=350, y=110, width=70, height=20,
                 axis=MovingPlatform.AXIS_HORIZONTAL,
                 distance=200, speed=100,
             ),
-            # Vertical moving platform (travels 180 px downward)
-            MovingPlatform(
-                x=600, y=350, width=100, height=20,
-                axis=MovingPlatform.AXIS_VERTICAL,
-                distance=180, speed=80,
-            ),
+
+            Wall(620, 80, 60, 20),       # high-right ledge
         ]
 
     def get_trophy_position(self) -> tuple[float, float]:
         """Place the trophy on top of the upper-right static platform."""
-        # The platform is at (550, 250, 150, 20) → centre it on top
         from src.entities.trophy import Trophy  # lazy import
+        x = 650
+        y = 80
         return (
-            550 + 150 // 2 - Trophy.DEFAULT_SIZE // 2,
-            250 - Trophy.DEFAULT_SIZE,
+            x - Trophy.DEFAULT_SIZE // 2,
+            y - Trophy.DEFAULT_SIZE,
         )
