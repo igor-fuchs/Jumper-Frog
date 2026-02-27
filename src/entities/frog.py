@@ -90,13 +90,13 @@ class Frog(Entity):
     DEFAULT_HEIGHT = 26
 
     # ── Movement defaults ────────────────────────────────────────────
-    DEFAULT_SPEED = 250.0
+    DEFAULT_SPEED = 100.0
 
     # ── Jump defaults (all exposed as properties for future tuning) ──
     DEFAULT_JUMP_ANGLE = 60.0
-    DEFAULT_JUMP_MAX_CHARGE = 2.0
+    DEFAULT_JUMP_MAX_CHARGE = 1.0
     DEFAULT_JUMP_MIN_POWER = 200.0
-    DEFAULT_JUMP_MAX_POWER = 600.0
+    DEFAULT_JUMP_MAX_POWER = 550.0
     DEFAULT_GRAVITY = 800.0
 
     # ── Animation defaults ────────────────────────────────────────────
