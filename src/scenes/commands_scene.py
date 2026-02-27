@@ -4,17 +4,24 @@ Shows a list of keyboard commands the player can use during gameplay.
 A ``BackButton`` in the top-left corner returns to the main menu.
 """
 
+import os
+
 import pygame
 
 from src.core.input_handler import InputHandler
 from src.core.settings import (
-    SCREEN_WIDTH,
+    SCREEN_WIDTH, SCREEN_HEIGHT,
     DARK_GREEN, LIGHT_GREEN, BLACK,
     DARK_GRAY, LIGHT_GRAY
 )
 from src.scenes.scene import Scene
 from src.ui.back_button import BackButton
 from src.ui.textbox import TextBox
+
+_BG_PATH = os.path.join(
+    os.path.dirname(__file__), os.pardir, os.pardir,
+    "assets", "background", "menu.png",
+)
 
 
 class CommandsScene(Scene):
@@ -29,32 +36,49 @@ class CommandsScene(Scene):
         # ── Back button (reusable UI component) ─────────────────────
         self.back_button = BackButton(callback=self._go_back)
 
-        # ── Commands text boxes ──────────────────────────────────────
+        # ── Background image (same as menu) ──────────────────────────
+        self._bg_image: pygame.Surface | None = None
+        if os.path.isfile(_BG_PATH):
+            img = pygame.image.load(_BG_PATH).convert()
+            self._bg_image = pygame.transform.scale(
+                img, (SCREEN_WIDTH, SCREEN_HEIGHT),
+            )
+
+        # ── Commands — two-column layout (key | action) ─────────────
         commands = [
-            "\u2191  Seta para cima  —  Mover para frente",
-            "\u2193  Seta para baixo  —  Mover para trás",
-            "\u2190  Seta para esquerda  —  Mover para esquerda",
-            "\u2192  Seta para direita  —  Mover para direita",
-            "ESC  —  Pausar o jogo",
-            "ENTER  —  Confirmar seleção",
+            ("A  ou  \u2190", "Mover para a esquerda"),
+            ("D  ou  \u2192", "Mover para a direita"),
+            ("ESPAÇO (segurar)", "Carregar pulo"),
+            ("ESPAÇO (soltar)", "Pular"),
+            ("ESC", "Pausar | Retomar o jogo"),
         ]
 
-        box_width = 500
+        key_width = 220
+        action_width = 310
         box_height = 40
-        gap = 12
+        gap_y = 12
+        gap_x = 10
         start_y = 180
 
+        total_row_width = key_width + gap_x + action_width
+        row_x = (SCREEN_WIDTH - total_row_width) // 2
+
         self.textboxes: list[TextBox] = []
-        cx = SCREEN_WIDTH // 2
-        for i, cmd in enumerate(commands):
-            rect = pygame.Rect(
-                cx - box_width // 2,
-                start_y + i * (box_height + gap),
-                box_width,
-                box_height,
+        for i, (key, action) in enumerate(commands):
+            y = start_y + i * (box_height + gap_y)
+
+            key_rect = pygame.Rect(row_x, y, key_width, box_height)
+            action_rect = pygame.Rect(
+                row_x + key_width + gap_x, y,
+                action_width, box_height,
+            )
+
+            self.textboxes.append(
+                TextBox(key_rect, key, font_size=20,
+                        bg_color=DARK_GRAY, border_color=LIGHT_GRAY)
             )
             self.textboxes.append(
-                TextBox(rect, cmd, font_size=20,
+                TextBox(action_rect, action, font_size=20,
                         bg_color=DARK_GRAY, border_color=LIGHT_GRAY)
             )
 
@@ -70,8 +94,11 @@ class CommandsScene(Scene):
         pass
 
     def render(self, screen: pygame.Surface) -> None:
-        # Background
-        screen.fill((20, 60, 20))
+        # Background image or fallback solid colour
+        if self._bg_image is not None:
+            screen.blit(self._bg_image, (0, 0))
+        else:
+            screen.fill((20, 60, 20))
 
         # ── Back button ──────────────────────────────────────────────
         self.back_button.draw(screen)
