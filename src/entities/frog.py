@@ -73,6 +73,7 @@ class Frog(Entity):
     VISUAL_FALLING = "falling"
     VISUAL_ON_EDGE_FRONT = "on_edge_front"
     VISUAL_ON_EDGE_BACK = "on_edge_back"
+    VISUAL_OVERCHARGE = "overcharge"
 
     # Map physics states with a fixed visual to their sprite key.
     _STATE_TO_VISUAL = {
@@ -80,6 +81,9 @@ class Frog(Entity):
         STATE_AIRBORNE: VISUAL_JUMPING,
         STATE_FALLING:  VISUAL_FALLING,
     }
+
+    # Charge ratio threshold above which the overcharge sprite is used.
+    OVERCHARGE_THRESHOLD = 1
 
     # ── Size defaults ────────────────────────────────────────────────
     DEFAULT_WIDTH = 36
@@ -186,6 +190,7 @@ class Frog(Entity):
             self.VISUAL_FALLING: _load("screaming.png"),
             self.VISUAL_ON_EDGE_FRONT: _load("looking_front.png"),
             self.VISUAL_ON_EDGE_BACK: _load("looking_back.png"),
+            self.VISUAL_OVERCHARGE: _load("overcharge.png"),
         }
 
     # ── Convenience queries ──────────────────────────────────────────
@@ -330,13 +335,20 @@ class Frog(Entity):
         """Choose the visual state based on physics state and context.
 
         Priority (highest first):
-        1. charging  → preparing
-        2. airborne  → jumping
-        3. falling   → falling (screaming)
-        4. grounded + moving → walking
-        5. grounded + idle + near edge → on_edge_front / on_edge_back
-        6. grounded + idle → default
+        1. charging ≥ 100 % → overcharge
+        2. charging < 100 % → preparing
+        3. airborne  → jumping
+        4. falling   → falling (screaming)
+        5. grounded + moving → walking
+        6. grounded + idle + near edge → on_edge_front / on_edge_back
+        7. grounded + idle → default
         """
+        # Overcharge sprite takes priority over the normal preparing
+        # sprite when the charge ratio exceeds the threshold.
+        if (self.state == self.STATE_CHARGING
+                and self.charge_ratio >= self.OVERCHARGE_THRESHOLD):
+            return self.VISUAL_OVERCHARGE
+
         fixed = self._STATE_TO_VISUAL.get(self.state)
         if fixed is not None:
             return fixed
@@ -413,42 +425,6 @@ class Frog(Entity):
 
     # ── Drawing ──────────────────────────────────────────────────────
 
-    def _get_charge_tint(self) -> tuple[int, int, int] | None:
-        """Return a multiplicative tint colour for the current charge.
-
-        * 0 %–10 %: ``None`` — keep original sprite colours.
-        * 10 %–100 %: progressively shift from neutral to warm
-          orange-red.  Values stay close to 255 so the sprite is
-          **warmed** rather than darkened.
-
-        The returned RGB is meant for ``pygame.BLEND_RGB_MULT``.
-        """
-        ratio = self.charge_ratio
-        if ratio <= 0.1:
-            return None
-        t = (ratio - 0.1) / 0.9  # normalise 10 %–100 % → 0.0–1.0
-
-        # (255,255,255) = no change.  Gradually pull G and B down to
-        # shift the hue toward orange / red without crushing channels.
-        r = 255
-        g = int(255 - 120 * t)   # 255 → 135
-        b = int(255 - 190 * t)   # 255 → 65
-        return (r, g, b)
-
-    def _get_charge_glow(self) -> tuple[int, int, int] | None:
-        """Return an additive glow colour for the current charge.
-
-        Creates a subtle warm brightness on top of the hue-shift so
-        the frog looks like it is glowing with energy.
-        """
-        ratio = self.charge_ratio
-        if ratio <= 0.1:
-            return None
-        t = (ratio - 0.1) / 0.9
-
-        glow = int(50 * t)       # 0 → 50
-        return (glow, glow // 3, 0)
-
     def draw(self, screen: pygame.Surface) -> None:
         """Render the current sprite instead of a plain rectangle.
 
@@ -473,18 +449,6 @@ class Frog(Entity):
         # Flip horizontally when facing left
         if self.facing == 1:
             sprite = pygame.transform.flip(sprite, True, False)
-
-        # Apply charge colour effect when preparing a jump
-        if self._visual_state == self.VISUAL_PREPARING:
-            tint = self._get_charge_tint()
-            if tint is not None:
-                sprite = sprite.copy()
-                # Warm the hue (multiplicative — preserves alpha)
-                sprite.fill(tint, special_flags=pygame.BLEND_RGB_MULT)
-                # Add a subtle glow on top (additive — preserves alpha)
-                glow = self._get_charge_glow()
-                if glow is not None:
-                    sprite.fill(glow, special_flags=pygame.BLEND_RGB_ADD)
 
         # Align the bottom of the sprite with the bottom of the hitbox
         draw_x = self.rect.x
