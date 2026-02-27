@@ -30,7 +30,7 @@ import os
 
 import pygame
 
-from src.core.settings import GREEN
+from src.core.settings import BASE_DIR, GREEN
 from src.entities.entity import Entity
 
 
@@ -104,10 +104,7 @@ class Frog(Entity):
     EDGE_THRESHOLD = 20          # pixels from centre to detect platform edge
 
     # ── Asset directory ──────────────────────────────────────────────
-    _ASSETS_DIR = os.path.join(
-        os.path.dirname(__file__), os.pardir, os.pardir,
-        "assets", "frogs",
-    )
+    _ASSETS_DIR = os.path.join(BASE_DIR, "assets", "frogs")
 
     def __init__(
         self,

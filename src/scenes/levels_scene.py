@@ -14,6 +14,7 @@ import pygame
 from src.core.input_handler import InputHandler
 from src.core.progress import get_unlocked, is_completed
 from src.core.settings import (
+    BASE_DIR,
     SCREEN_WIDTH, SCREEN_HEIGHT,
     DARK_GREEN, GREEN, LIGHT_GREEN, WHITE, BLACK,
     DARK_GRAY, GRAY, LIGHT_GRAY,
@@ -23,9 +24,7 @@ from src.scenes.scene import Scene
 from src.ui.back_button import BackButton
 
 # ── Asset paths ──────────────────────────────────────────────────────
-_ASSETS_DIR = os.path.join(
-    os.path.dirname(__file__), os.pardir, os.pardir, "assets",
-)
+_ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 _BG_PATH = os.path.join(_ASSETS_DIR, "background", "menu.png")
 _PADLOCK_PATH = os.path.join(_ASSETS_DIR, "icons", "padlock.png")
 _MINI_TROPHY_PATH = os.path.join(_ASSETS_DIR, "icons", "mini_trophy.png")

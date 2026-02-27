@@ -7,16 +7,14 @@ import pygame
 
 from src.core.input_handler import InputHandler
 from src.core.settings import (
+    BASE_DIR,
     SCREEN_WIDTH, SCREEN_HEIGHT,
     LIGHT_GREEN, BLACK
 )
 from src.scenes.scene import Scene
 from src.ui.button import Button
 
-_BG_PATH = os.path.join(
-    os.path.dirname(__file__), os.pardir, os.pardir,
-    "assets", "background", "menu.png",
-)
+_BG_PATH = os.path.join(BASE_DIR, "assets", "background", "menu.png")
 
 
 class MenuScene(Scene):
@@ -99,14 +97,14 @@ class MenuScene(Scene):
             screen.fill(bottom_color, bot_rect)
 
         # Title shadow
-        shadow = self.title_shadow_font.render("Frog Jumper", True, BLACK)
+        shadow = self.title_shadow_font.render("Jumper Frog", True, BLACK)
         shadow_rect = shadow.get_rect(
             centerx=SCREEN_WIDTH // 2 + 3, y=82,
         )
         screen.blit(shadow, shadow_rect)
 
         # Title
-        title = self.title_font.render("Frog Jumper", True, LIGHT_GREEN)
+        title = self.title_font.render("Jumper Frog", True, LIGHT_GREEN)
         title_rect = title.get_rect(centerx=SCREEN_WIDTH // 2, y=80)
         screen.blit(title, title_rect)
 

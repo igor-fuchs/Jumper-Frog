@@ -10,6 +10,7 @@ import os
 
 import pygame
 
+from src.core.settings import BASE_DIR
 from src.entities.entity import Entity
 
 
@@ -26,10 +27,7 @@ class Trophy(Entity):
 
     DEFAULT_SIZE = 50
 
-    _ICON_PATH = os.path.join(
-        os.path.dirname(__file__), os.pardir, os.pardir,
-        "assets", "icons", "trophy.png",
-    )
+    _ICON_PATH = os.path.join(BASE_DIR, "assets", "icons", "trophy.png")
 
     def __init__(
         self,

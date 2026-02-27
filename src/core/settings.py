@@ -1,10 +1,19 @@
 """Global settings and constants for the game."""
 
+import os
+import sys
+
+# ── Base directory (supports PyInstaller --onefile) ──────────────────
+if getattr(sys, "frozen", False):
+    BASE_DIR = sys._MEIPASS          # pylint: disable=protected-access,no-member
+else:
+    BASE_DIR = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
+
 # Window
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 FPS = 60
-TITLE = "Frog Jumper"
+TITLE = "Jumper Frog"
 
 # Colors
 WHITE = (255, 255, 255)

@@ -10,6 +10,7 @@ import pygame
 
 from src.core.input_handler import InputHandler
 from src.core.settings import (
+    BASE_DIR,
     SCREEN_WIDTH, SCREEN_HEIGHT,
     DARK_GREEN, LIGHT_GREEN, BLACK,
     DARK_GRAY, LIGHT_GRAY
@@ -18,10 +19,7 @@ from src.scenes.scene import Scene
 from src.ui.back_button import BackButton
 from src.ui.textbox import TextBox
 
-_BG_PATH = os.path.join(
-    os.path.dirname(__file__), os.pardir, os.pardir,
-    "assets", "background", "menu.png",
-)
+_BG_PATH = os.path.join(BASE_DIR, "assets", "background", "menu.png")
 
 
 class CommandsScene(Scene):

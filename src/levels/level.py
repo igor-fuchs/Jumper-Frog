@@ -25,15 +25,12 @@ import os
 
 import pygame
 
-from src.core.settings import SCREEN_WIDTH, SCREEN_HEIGHT, GRAY
+from src.core.settings import BASE_DIR, SCREEN_WIDTH, SCREEN_HEIGHT, GRAY
 from src.entities.entity import Entity
 from src.entities.wall import Wall
 
 # Directory containing background images (root/assets/background/).
-_BG_DIR = os.path.join(
-    os.path.dirname(__file__), os.pardir, os.pardir,
-    "assets", "background",
-)
+_BG_DIR = os.path.join(BASE_DIR, "assets", "background")
 
 
 # Thickness (pixels) of the boundary walls that enclose every level.

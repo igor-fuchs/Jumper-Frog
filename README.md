@@ -22,6 +22,7 @@ Um jogo de plataforma 2D desenvolvido em Python com **Pygame**, onde o jogador c
   - [Manager](#manager)
 - [Assets](#assets)
 - [Criando um Novo Nível](#criando-um-novo-nível)
+- [Gerar Executável](#gerar-executável)
 - [Qualidade de Código](#qualidade-de-código)
 - [Tecnologias](#tecnologias)
 - [Autor](#autor)
@@ -257,7 +258,7 @@ Objeto coletável que marca o objetivo da fase. Carrega e renderiza o sprite `as
 ### Cenas
 
 #### `MenuScene`
-Menu principal com título "Frog Jumper", 3 botões (Iniciar, Comandos, Sair) e créditos. Usa background de `assets/background/menu.png`.
+Menu principal com título "Jumper frog", 3 botões (Iniciar, Comandos, Sair) e créditos. Usa background de `assets/background/menu.png`.
 
 #### `CommandsScene`
 Exibe os controles do jogo em layout de duas colunas (tecla | ação). Botão de voltar retorna ao menu.
@@ -380,6 +381,58 @@ _REGISTRY[N] = LevelN
 3. Adicione o background em `assets/background/levelN.png`.
 
 A área jogável é **800×600** com bordas de 20px em cada lado (área útil: 20–780 horizontal, 20–580 vertical).
+
+---
+
+## Gerar Executável
+
+O projeto inclui um arquivo de configuração [jumper_frog.spec](jumper_frog.spec) para gerar um executável standalone com **PyInstaller**. O executável empacota todo o código e os assets em um único arquivo, dispensando a instalação de Python ou dependências no computador de destino.
+
+### Pré-requisitos para Build
+
+```bash
+pip install pyinstaller
+```
+
+No Linux, o pacote `binutils` também é necessário:
+
+```bash
+sudo apt install binutils
+```
+
+### Gerar o Executável
+
+```bash
+pyinstaller jumper_frog.spec
+```
+
+O executável será gerado em `dist/JumperFrog` (Linux/macOS) ou `dist/JumperFrog.exe` (Windows).
+
+### Executar
+
+```bash
+# Linux / macOS
+./dist/JumperFrog
+
+# Windows
+dist\JumperFrog.exe
+```
+
+### Como Funciona
+
+O arquivo `jumper_frog.spec` configura:
+
+- **Ponto de entrada**: `src/main.py`
+- **Assets incluídos**: todas as imagens de `assets/background/`, `assets/frogs/` e `assets/icons/` são empacotadas dentro do executável.
+- **Hidden imports**: todos os módulos de `src/` são listados explicitamente para garantir que o PyInstaller os inclua.
+- **Modo onefile**: gera um único arquivo executável (`console=False` suprime o terminal no Windows).
+- **Resolução de assets**: em modo `--onefile`, o PyInstaller extrai os assets para um diretório temporário (`sys._MEIPASS`). O código detecta isso automaticamente via `BASE_DIR` em `settings.py`.
+
+> **Nota**: no diretório `dist/` gerado pelo PyInstaller esterá presente o `.exe`.
+
+### Build para Outro Sistema Operacional
+
+O PyInstaller gera executáveis **nativos para o sistema onde o build é executado**. Para gerar um `.exe` do Windows, execute o build em uma máquina Windows. O mesmo vale para macOS.
 
 ---
 
